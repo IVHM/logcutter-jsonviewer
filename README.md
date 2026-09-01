@@ -1,0 +1,34 @@
+# JSON Log Explorer
+
+A standalone, local-first workspace for investigating JSON logs. Import CSV or JSONL, pin the fields you care about, spread related events across canvases, and keep notes and arrows with the evidence. Nothing leaves the browser.
+
+## Run locally
+
+```bash
+npm install
+npm run dev
+```
+
+Open [http://localhost:43123](http://localhost:43123). All projects persist in IndexedDB on that browser. Use **Settings → Export project file** to move an investigation to another machine.
+
+```bash
+npm run build
+npm start
+```
+
+There is no backend and no account. Duplicate logs are skipped with a SHA-256 hash map of canonical JSON, which is cheaper than storing a second copy of the payload.
+
+## Workflow
+
+1. Create a project (or open the sample incident).
+2. Import a `.csv` (JSON in a cell, or one object per row), `.json`, or `.jsonl`.
+3. Open a **log set** to pick canvas card headers (up to three fields and a color) and browse the whole set. **Browser views** each belong to one log set; use **+** next to Browser views and choose the set. Filters (equals, greater than, AND/OR, parentheses) are what make views different. Search in a view is temporary and is not saved.
+4. On a canvas: drag to box-select, middle-click to pan, Ctrl+wheel to zoom. Expand a log and click the pin next to a field so it stays visible when the card is collapsed. Double-click the pane for a sticky note. Use **Arrow** then two cards to connect them. **Brace** places a labeled `{` with two clicks (a dotted guide follows the pointer after the first click); click the brace and use the arrows to point it left, right, up, or down.
+
+## Import formats
+
+- CSV with a JSON blob in one column plus ancillary columns (`host`, `timestamp`, …). Ancillary values attach to the log without mutating the payload.
+- CSV of flat fields (each row becomes an object).
+- JSON array, single object, JSONL / NDJSON.
+
+A sample CSV lives at `public/sample-logs.csv`.
