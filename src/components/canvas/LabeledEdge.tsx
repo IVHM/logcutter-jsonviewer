@@ -1,0 +1,153 @@
+"use client";
+
+import {
+  BaseEdge,
+  EdgeLabelRenderer,
+  type EdgeProps,
+  getBezierPath,
+  getSmoothStepPath,
+  getStraightPath,
+} from "@xyflow/react";
+import { useState } from "react";
+import { useProjectStore } from "@/lib/store";
+import { useCanvasArrow, useCanvasId } from "./canvas-context";
+
+export function LabeledEdge({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  selected,
+  markerEnd,
+  style,
+  data,
+  type,
+}: EdgeProps) {
+  const canvasId = useCanvasId();
+  const updateEdge = useProjectStore((s) => s.updateEdge);
+  const { onEndpointClick, reconnectingEdgeId } = useCanvasArrow();
+  const [editing, setEditing] = useState(false);
+  const label = (data as { label?: string } | undefined)?.label ?? "";
+  const showLabel = Boolean(label) || selected || editing;
+  const reconnecting = reconnectingEdgeId === id;
+
+  const pathFn = type === "straight" ? getStraightPath : type === "default" ? getBezierPath : getSmoothStepPath;
+  const [edgePath, labelX, labelY] = pathFn({
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+  });
+
+  if (reconnecting) return null;
+
+  return (
+    <>
+      <BaseEdge
+        id={id}
+        path={edgePath}
+        markerEnd={markerEnd}
+        interactionWidth={52}
+        style={{
+          ...style,
+          stroke: selected ? "#7dd3fc" : "#a1a1aa",
+          strokeWidth: selected ? 2.8 : 2,
+        }}
+      />
+      <path
+        d={edgePath}
+        fill="none"
+        stroke="transparent"
+        strokeWidth={52}
+        className="react-flow__edge-interaction"
+        style={{ pointerEvents: "stroke", cursor: "pointer" }}
+      />
+      <EdgeLabelRenderer>
+        {selected ? (
+          <>
+            <EndpointButton
+              x={sourceX}
+              y={sourceY}
+              label="Move tail"
+              onPick={() => onEndpointClick(id, "source")}
+            />
+            <EndpointButton
+              x={targetX}
+              y={targetY}
+              label="Move head"
+              onPick={() => onEndpointClick(id, "target")}
+            />
+          </>
+        ) : null}
+        {showLabel ? (
+          <div
+            className="nodrag nopan pointer-events-auto absolute origin-center"
+            style={{
+              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+              zIndex: 30,
+            }}
+          >
+            {editing ? (
+              <input
+                autoFocus
+                className="rounded-md border-0 bg-zinc-800/60 px-1.5 py-0.5 text-[11px] text-zinc-100 outline-none shadow-none"
+                defaultValue={label}
+                onBlur={(e) => {
+                  updateEdge(canvasId, id, { data: { label: e.target.value } });
+                  setEditing(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                  if (e.key === "Escape") setEditing(false);
+                }}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="rounded-md border-0 bg-zinc-800/60 px-1.5 py-0.5 text-[11px] text-zinc-100 shadow-none"
+              >
+                {label || "Add label"}
+              </button>
+            )}
+          </div>
+        ) : null}
+      </EdgeLabelRenderer>
+    </>
+  );
+}
+
+function EndpointButton({
+  x,
+  y,
+  label,
+  onPick,
+}: {
+  x: number;
+  y: number;
+  label: string;
+  onPick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      className="nodrag nopan pointer-events-auto absolute size-3.5 rounded-full border-2 border-white bg-sky-400 shadow"
+      style={{
+        transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`,
+        zIndex: 21,
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        onPick();
+      }}
+    />
+  );
+}
